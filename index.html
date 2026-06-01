@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Vigilancia</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #0f0f18;
+    --panel: #13131f;
+    --border: #1e1e35;
+    --accent: #00e5ff;
+    --accent2: #ff3d71;
+    --green: #00ff88;
+    --text: #e0e0f0;
+    --muted: #4a4a6a;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-main: 'Exo 2', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCAN LINE EFFECT */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* LOGIN */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+  }
+
+  .login-logo {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+  }
+
+  .login-title {
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 30px rgba(0,229,255,0.5);
+    margin-bottom: 0.3rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+  }
+
+  .pin-display {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .pin-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--muted);
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .pin-dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  .pin-dot.error {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    box-shadow: 0 0 10px var(--accent2);
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 72px);
+    gap: 0.8rem;
+  }
+
+  .key {
+    height: 72px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .key:active, .key.pressed {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    transform: scale(0.92);
+  }
+
+  .key.del {
+    font-size: 1rem;
+    color: var(--accent2);
+    border-color: rgba(255,61,113,0.3);
+  }
+
+  .key.empty { visibility: hidden; }
+
+  .login-hint {
+    margin-top: 2rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .header-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), #0066ff);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  .header-title {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+
+  .btn-icon:active { color: var(--accent); border-color: var(--accent); }
+
+  /* TOOLBAR */
+  .toolbar {
+    padding: 0.6rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 0.4rem 0.9rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* GRID */
+  #cam-grid {
+    padding: 0.8rem;
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #cam-grid.layout-1 { grid-template-columns: 1fr; }
+  #cam-grid.layout-2 { grid-template-columns: repeat(2, 1fr); }
+  #cam-grid.layout-4 { grid-template-columns: repeat(2, 1fr); }
+
+  /* CAMERA CARD */
+  .cam-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 16/9;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .cam-card:active { border-color: var(--accent); }
+
+  .cam-card.fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    border-radius: 0;
+    aspect-ratio: unset;
+  }
+
+  .cam-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .cam-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* OVERLAYS */
+  .cam-overlay-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 0.4rem 0.6rem;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .cam-name {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: #fff;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .cam-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(0,255,136,0.15);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 4px;
+    padding: 0.1rem 0.3rem;
+  }
+
+  .cam-badge.offline {
+    background: rgba(255,61,113,0.15);
+    border-color: rgba(255,61,113,0.3);
+  }
+
+  .cam-badge-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+
+  .cam-badge.offline .cam-badge-dot { background: var(--accent2); }
+
+  .cam-badge-text {
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    color: var(--green);
+    letter-spacing: 0.05em;
+  }
+
+  .cam-badge.offline .cam-badge-text { color: var(--accent2); }
+
+  .cam-overlay-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.4rem 0.6rem;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cam-timestamp {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: rgba(255,255,255,0.6);
+  }
+
+  .cam-ch {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: var(--accent);
+    opacity: 0.7;
+  }
+
+  /* LOADING STATE */
+  .cam-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--panel);
+  }
+
+  .cam-loading-icon {
+    font-size: 1.5rem;
+    animation: spin 2s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .cam-loading-text {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ERROR STATE */
+  .cam-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: var(--panel);
+  }
+
+  .cam-error-icon { font-size: 1.8rem; opacity: 0.4; }
+
+  .cam-error-text {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-align: center;
+    padding: 0 1rem;
+  }
+
+  .cam-retry {
+    margin-top: 0.3rem;
+    padding: 0.3rem 0.8rem;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+  }
+
+  /* FULLSCREEN CLOSE */
+  .fs-close {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 600;
+    width: 40px;
+    height: 40px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fs-close.visible { display: flex; }
+
+  /* SETTINGS PANEL */
+  #settings-panel {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 800;
+    display: none;
+    align-items: flex-end;
+  }
+
+  #settings-panel.open { display: flex; }
+
+  .settings-sheet {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    padding: 1.5rem;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .settings-title {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-label {
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
+  .settings-value {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .settings-input {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    width: 160px;
+  }
+
+  .settings-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .btn-save {
+    margin-top: 1.5rem;
+    width: 100%;
+    padding: 0.9rem;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .btn-close-settings {
+    margin-top: 0.8rem;
+    width: 100%;
+    padding: 0.7rem;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  /* NETWORK MODE INDICATOR */
+  .net-mode {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .net-mode.local { border-color: rgba(0,255,136,0.3); color: var(--green); }
+  .net-mode.remote { border-color: rgba(0,229,255,0.3); color: var(--accent); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text);
+    z-index: 9000;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-logo">Sistema de Seguridad</div>
+  <div class="login-title">VIGILANCIA</div>
+  <div class="login-subtitle">Ingrese su PIN de acceso</div>
+  <div class="pin-display" id="pin-display">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="keypad">
+    <button class="key" onclick="pinKey('1')">1</button>
+    <button class="key" onclick="pinKey('2')">2</button>
+    <button class="key" onclick="pinKey('3')">3</button>
+    <button class="key" onclick="pinKey('4')">4</button>
+    <button class="key" onclick="pinKey('5')">5</button>
+    <button class="key" onclick="pinKey('6')">6</button>
+    <button class="key" onclick="pinKey('7')">7</button>
+    <button class="key" onclick="pinKey('8')">8</button>
+    <button class="key" onclick="pinKey('9')">9</button>
+    <button class="key empty"></button>
+    <button class="key" onclick="pinKey('0')">0</button>
+    <button class="key del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="login-hint">PIN por defecto: 1234</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none;">
+
+  <header>
+    <div class="header-left">
+      <div class="header-icon">📹</div>
+      <div class="header-title">VIGILANCIA</div>
+    </div>
+    <div id="net-indicator" class="net-mode">
+      <span>⬤</span> <span id="net-label">DETECTANDO</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-icon" onclick="refreshAll()" title="Actualizar">↻</button>
+      <button class="btn-icon" onclick="openSettings()" title="Ajustes">⚙</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="tab active" onclick="setLayout('2', this)">2×2</button>
+    <button class="tab" onclick="setLayout('1', this)">1×1</button>
+    <button class="tab" onclick="setLayout('4', this)">4×2</button>
+    <button class="tab" onclick="refreshAll(this)">↻ Todas</button>
+  </div>
+
+  <div id="cam-grid" class="layout-2"></div>
+
+</div>
+
+<!-- FULLSCREEN CLOSE -->
+<button class="fs-close" id="fs-close" onclick="closeFullscreen()">✕</button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SETTINGS PANEL -->
+<div id="settings-panel">
+  <div class="settings-sheet">
+    <div class="settings-title">⚙ Configuración</div>
+    <div class="settings-row">
+      <span class="settings-label">IP DVR (local)</span>
+      <input class="settings-input" id="cfg-dvr-ip" value="192.168.18.188">
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Puerto DVR</span>
+      <input class="settings-input" id="cfg-dvr-port" value="34567">
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Usuario DVR</span>
+      <input class="settings-input" id="cfg-dvr-user" value="admin">
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">IP Tailscale PC</span>
+      <input class="settings-input" id="cfg-ts-ip" value="100.76.188.91">
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">PIN de acceso</span>
+      <input class="settings-input" id="cfg-pin" type="password" placeholder="Nueva PIN (4 dígitos)">
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Intervalo snapshot (seg)</span>
+      <input class="settings-input" id="cfg-interval" value="5" type="number" min="3" max="60">
+    </div>
+    <button class="btn-save" onclick="saveSettings()">GUARDAR</button>
+    <button class="btn-close-settings" onclick="closeSettings()">CANCELAR</button>
+  </div>
+</div>
+
+<script>
+// ========== CONFIG ==========
+let config = {
+  dvrIp: '192.168.18.188',
+  dvrPort: '34567',
+  dvrUser: 'admin',
+  dvrPass: '',
+  tsIp: '100.76.188.91',
+  pin: '1234',
+  interval: 5,
+  activeIp: null
+};
+
+// Load saved config
+try {
+  const saved = localStorage.getItem('vig_config');
+  if (saved) Object.assign(config, JSON.parse(saved));
+} catch(e) {}
+
+// Camera names
+const CAM_NAMES = [
+  'CAM 01', 'CAM 02', 'CAM 03', 'CAM 04',
+  'CAM 05', 'CAM 06', 'CAM 07', 'CAM 08'
+];
+
+const CAM_WIFI = {
+  name: 'CAM WIFI',
+  sn: 'b5a2bd04e71bc8833sr2'
+};
+
+let refreshTimers = {};
+let fullscreenCam = null;
+
+// ========== PIN LOGIN ==========
+let pinEntry = '';
+
+function pinKey(d) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += d;
+  updatePinDisplay();
+  if (pinEntry.length === 4) {
+    setTimeout(() => checkPin(), 200);
+  }
+}
+
+function pinDel() {
+  pinEntry = pinEntry.slice(0, -1);
+  updatePinDisplay();
+}
+
+function updatePinDisplay() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('d' + i);
+    dot.classList.toggle('filled', i < pinEntry.length);
+    dot.classList.remove('error');
+  }
+}
+
+function checkPin() {
+  if (pinEntry === config.pin) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } else {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('d' + i).classList.add('error');
+    }
+    setTimeout(() => {
+      pinEntry = '';
+      updatePinDisplay();
+    }, 800);
+  }
+}
+
+// ========== NETWORK DETECTION ==========
+async function detectNetwork() {
+  const indicator = document.getElementById('net-indicator');
+  const label = document.getElementById('net-label');
+
+  // Try local DVR first
+  try {
+    const url = `http://${config.dvrIp}/`;
+    await fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(2000) });
+    config.activeIp = config.dvrIp;
+    indicator.className = 'net-mode local';
+    label.textContent = 'LOCAL';
+    return 'local';
+  } catch(e) {}
+
+  // Try Tailscale
+  try {
+    const url = `http://${config.tsIp}/`;
+    await fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(3000) });
+    config.activeIp = config.tsIp;
+    indicator.className = 'net-mode remote';
+    label.textContent = 'TAILSCALE';
+    return 'remote';
+  } catch(e) {}
+
+  config.activeIp = config.dvrIp; // fallback
+  indicator.className = 'net-mode';
+  label.textContent = 'SIN RED';
+  return 'none';
+}
+
+// ========== SNAPSHOT URL ==========
+function getSnapshotUrl(channel) {
+  const ip = config.activeIp || config.dvrIp;
+  const t = Date.now();
+  // XM DVR snapshot URL format
+  return `http://${ip}/web/cgi-bin/snapshot.cgi?chn=${channel}&u=${config.dvrUser}&p=${config.dvrPass}&t=${t}`;
+}
+
+// ========== INIT ==========
+async function initApp() {
+  await detectNetwork();
+  buildGrid();
+  setInterval(detectNetwork, 30000);
+}
+
+// ========== BUILD GRID ==========
+function buildGrid() {
+  const grid = document.getElementById('cam-grid');
+  grid.innerHTML = '';
+
+  // 8 DVR cameras
+  for (let i = 0; i < 8; i++) {
+    const card = createCamCard(i, CAM_NAMES[i], 'dvr');
+    grid.appendChild(card);
+  }
+
+  // WiFi camera
+  const wifiCard = createCamCard('wifi', CAM_WIFI.name, 'wifi');
+  grid.appendChild(wifiCard);
+}
+
+function createCamCard(idx, name, type) {
+  const card = document.createElement('div');
+  card.className = 'cam-card';
+  card.id = `cam-${idx}`;
+  card.dataset.idx = idx;
+  card.dataset.type = type;
+
+  card.innerHTML = `
+    <div class="cam-inner">
+      <div class="cam-loading" id="loading-${idx}">
+        <div class="cam-loading-icon">⟳</div>
+        <div class="cam-loading-text">CONECTANDO...</div>
+      </div>
+      <img id="img-${idx}" src="" alt="${name}" style="display:none;"
+           onload="onImgLoad(${JSON.stringify(idx)})"
+           onerror="onImgError(${JSON.stringify(idx)})">
+      <div class="cam-error" id="error-${idx}" style="display:none;">
+        <div class="cam-error-icon">📵</div>
+        <div class="cam-error-text">SIN SEÑAL<br>${name}</div>
+        <button class="cam-retry" onclick="retryCam(${JSON.stringify(idx)})">REINTENTAR</button>
+      </div>
+      <div class="cam-overlay-top">
+        <span class="cam-name">${name}</span>
+        <div class="cam-badge offline" id="badge-${idx}">
+          <div class="cam-badge-dot"></div>
+          <span class="cam-badge-text">OFF</span>
+        </div>
+      </div>
+      <div class="cam-overlay-bottom">
+        <span class="cam-timestamp" id="ts-${idx}">--:--:--</span>
+        <span class="cam-ch">CH${String(idx+1).padStart(2,'0')}</span>
+      </div>
+    </div>
+  `;
+
+  card.addEventListener('click', (e) => {
+    if (e.target.classList.contains('cam-retry')) return;
+    toggleFullscreen(idx);
+  });
+
+  // Start loading
+  if (type === 'dvr') {
+    loadDvrCam(idx);
+  } else {
+    loadWifiCam(idx);
+  }
+
+  return card;
+}
+
+// ========== DVR CAMERA LOAD ==========
+function loadDvrCam(idx) {
+  const img = document.getElementById(`img-${idx}`);
+  if (!img) return;
+
+  showLoading(idx);
+  const url = getSnapshotUrl(idx);
+  img.src = url;
+
+  // Schedule refresh
+  clearTimeout(refreshTimers[idx]);
+  refreshTimers[idx] = setTimeout(() => loadDvrCam(idx), config.interval * 1000);
+}
+
+// ========== WIFI CAMERA ==========
+function loadWifiCam(idx) {
+  // WiFi cam uses P2P cloud - show info card instead
+  const loading = document.getElementById(`loading-${idx}`);
+  const error = document.getElementById(`error-${idx}`);
+  if (loading) loading.style.display = 'none';
+  if (error) {
+    error.style.display = 'flex';
+    error.innerHTML = `
+      <div style="font-size:1.5rem;">📡</div>
+      <div class="cam-error-text" style="color:var(--accent);">CAM WIFI<br><span style="font-size:0.5rem;color:var(--muted);">Abrir en app CAMO</span></div>
+      <button class="cam-retry" onclick="openCamoApp()" style="border-color:var(--accent);color:var(--accent);">ABRIR APP</button>
+    `;
+  }
+}
+
+function openCamoApp() {
+  showToast('Abriendo app CAMO...');
+  window.location.href = 'intent://open#Intent;scheme=camo;package=com.icsee.icsee;end';
+}
+
+// ========== IMAGE EVENTS ==========
+function onImgLoad(idx) {
+  const img = document.getElementById(`img-${idx}`);
+  const loading = document.getElementById(`loading-${idx}`);
+  const error = document.getElementById(`error-${idx}`);
+  const badge = document.getElementById(`badge-${idx}`);
+  const ts = document.getElementById(`ts-${idx}`);
+
+  if (img) img.style.display = 'block';
+  if (loading) loading.style.display = 'none';
+  if (error) error.style.display = 'none';
+
+  if (badge) {
+    badge.className = 'cam-badge';
+    badge.innerHTML = '<div class="cam-badge-dot"></div><span class="cam-badge-text">EN VIVO</span>';
+  }
+
+  if (ts) {
+    const now = new Date();
+    ts.textContent = now.toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  }
+}
+
+function onImgError(idx) {
+  const img = document.getElementById(`img-${idx}`);
+  const loading = document.getElementById(`loading-${idx}`);
+  const error = document.getElementById(`error-${idx}`);
+
+  if (img) img.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+  if (error) error.style.display = 'flex';
+}
+
+function retryCam(idx) {
+  loadDvrCam(idx);
+}
+
+// ========== LAYOUT ==========
+function setLayout(type, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const grid = document.getElementById('cam-grid');
+  grid.className = `layout-${type}`;
+}
+
+// ========== REFRESH ==========
+function refreshAll() {
+  showToast('Actualizando cámaras...');
+  detectNetwork().then(() => {
+    for (let i = 0; i < 8; i++) {
+      clearTimeout(refreshTimers[i]);
+      loadDvrCam(i);
+    }
+  });
+}
+
+// ========== FULLSCREEN ==========
+function toggleFullscreen(idx) {
+  const card = document.getElementById(`cam-${idx}`);
+  if (!card) return;
+
+  if (fullscreenCam === idx) {
+    closeFullscreen();
+  } else {
+    if (fullscreenCam !== null) closeFullscreen();
+    card.classList.add('fullscreen');
+    document.getElementById('fs-close').classList.add('visible');
+    fullscreenCam = idx;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeFullscreen() {
+  if (fullscreenCam !== null) {
+    const card = document.getElementById(`cam-${fullscreenCam}`);
+    if (card) card.classList.remove('fullscreen');
+  }
+  document.getElementById('fs-close').classList.remove('visible');
+  fullscreenCam = null;
+  document.body.style.overflow = '';
+}
+
+// ========== SETTINGS ==========
+function openSettings() {
+  document.getElementById('cfg-dvr-ip').value = config.dvrIp;
+  document.getElementById('cfg-dvr-port').value = config.dvrPort;
+  document.getElementById('cfg-dvr-user').value = config.dvrUser;
+  document.getElementById('cfg-ts-ip').value = config.tsIp;
+  document.getElementById('cfg-interval').value = config.interval;
+  document.getElementById('settings-panel').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-panel').classList.remove('open');
+}
+
+function saveSettings() {
+  config.dvrIp = document.getElementById('cfg-dvr-ip').value.trim();
+  config.dvrPort = document.getElementById('cfg-dvr-port').value.trim();
+  config.dvrUser = document.getElementById('cfg-dvr-user').value.trim();
+  config.tsIp = document.getElementById('cfg-ts-ip').value.trim();
+  config.interval = parseInt(document.getElementById('cfg-interval').value) || 5;
+
+  const newPin = document.getElementById('cfg-pin').value.trim();
+  if (newPin.length === 4 && /^\d+$/.test(newPin)) {
+    config.pin = newPin;
+  }
+
+  localStorage.setItem('vig_config', JSON.stringify(config));
+  closeSettings();
+  showToast('✓ Configuración guardada');
+  setTimeout(() => { refreshAll(); }, 500);
+}
+
+// ========== TOAST ==========
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ========== SERVICE WORKER ==========
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
